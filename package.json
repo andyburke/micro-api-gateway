@@ -1,0 +1,24 @@
+{
+  "name": "micro-api-gateway",
+  "version": "1.0.0",
+  "description": "A flexible API gateway.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Andy Burke <andy.burke@mailbox.earth>",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^5.9.0"
+  },
+  "files": [
+    "plugins/*"
+  ],
+  "dependencies": {
+    "extend": "^3.0.2",
+    "get-request-ip": "^1.0.1",
+    "httpstatuses": "^3.0.0",
+    "js-crypto-key-utils": "^0.5.4",
+    "json-stable-stringify": "^1.0.1"
+  }
+}

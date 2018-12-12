@@ -1,0 +1,191 @@
+'use strict';
+
+const extend = require( 'extend' );
+const get_request_ip = require( 'get-request-ip' );
+const http = require( 'http' );
+const httpstatuses = require( 'httpstatuses' );
+const pkg = require( './package.json' );
+const url = require( 'url' );
+
+async function _process_plugins( plugins, options, request, response ) {
+    for( let plugin_index = 0; plugin_index < plugins.length; ++plugin_index ) {
+        const plugin = plugins[ plugin_index ];
+        const result = await plugin( options );
+        if ( !!result ) {
+            if ( result.headers ) {
+                Object.keys( result.headers ).forEach( header => {
+                    response.setHeader( header, result.headers[ header ] );
+                } );
+            }
+
+            if ( result.status ) {
+                response.statusCode = result.status;
+                response.end( typeof result.body !== 'undefined' ? result.body : 'Error processing request.' );
+                return false;
+            }
+
+            return true;
+        }
+    }
+    return true;
+}
+
+module.exports = {
+    create: function() {
+        return {
+            init: function( _options ) {
+                this.options = extend( true, {
+                    endpoints: [],
+                    routes: [],
+                    matcher: path => {
+                        return {
+                            match: url => {
+                                return url === path ? {} : undefined;
+                            }
+                        };
+                    },
+                    plugins: {
+                        endpoints: [],
+                        routes: []
+                    }
+                }, _options );
+
+                this.options.endpoints.forEach( endpoint => {
+                    this.add_endpoint( endpoint );
+                } );
+
+                this.options.routes.forEach( route => {
+                    this.add_route( route );
+                } );
+
+                return this;
+            },
+
+            add_endpoint: function( _endpoint ) {
+                const endpoint = extend( true, {}, _endpoint, {
+                    _matcher: _endpoint.matcher || this.options.matcher( _endpoint.path )
+                } );
+
+                this.endpoints = this.endpoints || [];
+                this.endpoints.push( endpoint );
+            },
+
+            add_route: function( _route ) {
+                const parsed_target = url.parse( _route.target );
+                const route = extend( true, {}, _route, {
+                    _target: {
+                        hostname: parsed_target.hostname,
+                        port: parsed_target.port
+                    },
+                    _matcher: _route.matcher || this.options.matcher( _route.path )
+                } );
+
+                this.routes = this.routes || [];
+                this.routes.push( route );
+
+                return this;
+            },
+
+            listen: function( _options ) {
+                const options = extend( true, {
+                    port: 8000
+                }, _options );
+
+                http.createServer( async ( request, response ) => {
+
+                    let target_url = null;
+
+                    const endpoint = this.endpoints.find( _endpoint => {
+                        const is_correct_method = _endpoint.methods === '*' ? true : _endpoint.methods.includes( request.method );
+                        target_url = request.url;
+                        return is_correct_method && !!( request.params = _endpoint._matcher.match( target_url ) );
+                    } );
+
+                    if ( endpoint ) {
+                        const plugins = this.options.plugins.endpoints.concat( endpoint.plugins || [] );
+
+                        const processed = await _process_plugins( plugins, {
+                            request,
+                            response
+                        }, request, response );
+                        if ( !processed ) {
+                            return;
+                        }
+
+                        await endpoint.handler( request, response );
+                        return;
+                    }
+
+                    const route = this.routes.find( route => {
+                        const is_correct_method = route.methods === '*' ? true : route.methods.includes( request.method );
+                        const is_correct_mount = route.mount ? request.url.indexOf( route.mount ) === 0 : true;
+                        target_url = is_correct_mount ? ( route.mount ? request.url.substr( route.mount.length ) : request.url ) : null;
+                        return is_correct_method && is_correct_mount && !!( request.params = route._matcher.match( target_url ) );
+                    } );
+
+                    if ( !route ) {
+                        response.statusCode = httpstatuses.not_found;
+                        response.setHeader( 'Content-Type', 'application/json' );
+                        response.end( '{ "error": "not found" }' );
+                        return;
+                    }
+
+                    const proxied_request = http.request( {
+                        hostname: route._target.hostname,
+                        port: route._target.port,
+                        method: request.method,
+                        path: target_url,
+                        headers: {
+                            'x-forwarded-for': get_request_ip( request ),
+                            'x-micro-api-gateway': pkg.version
+                        }
+                    } );
+
+                    const route_options = {
+                        proxied_request,
+                        request,
+                        response
+                    };
+
+                    const plugins = this.options.plugins.routes.concat( route.plugins || [] );
+                    const processed = await _process_plugins( plugins, route_options, request, response );
+
+                    if ( !processed ) {
+                        return;
+                    }
+
+                    try {
+                        proxied_request.on( 'error', error => {
+
+                            if ( !!error && error.code === 'ECONNREFUSED' ) {
+                                response.statusCode = httpstatuses.bad_gateway;
+                                response.setHeader( 'Content-Type', 'application/json' );
+                                response.end( JSON.stringify( {
+                                    error: 'connection refused',
+                                    message: 'The target connection was refused.'
+                                } ) );
+                            }
+                            else {
+                                response.statusCode = httpstatuses.internal_server_error;
+                                response.end();
+                            }
+                        } );
+
+                        proxied_request.on( 'response', proxied_response => {
+                            response.statusCode = proxied_response.statusCode;
+                            proxied_response.pipe( response );
+                        } );
+
+                        request.pipe( proxied_request );
+                    }
+                    catch( ex ) {
+                        console.dir( ex );
+                        response.statusCode = httpstatuses.internal_server_error;
+                        response.end();
+                    }
+
+                } ).listen( options.port );
+            }
+        };
+    }
+};
