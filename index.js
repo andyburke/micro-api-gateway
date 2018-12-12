@@ -172,10 +172,12 @@ module.exports = {
                             } )
                             .on( 'response', proxied_response => {
                                 response.writeHead( proxied_response.statusCode, proxied_response.headers );
-                            } )
-                            .pipe( response );
+                                proxied_response.pipe( response );
+                            } );
 
-                        request.pipe( proxied_request );
+                        request.pipe( proxied_request, {
+                            end: true
+                        } );
                     }
                     catch( ex ) {
                         console.dir( ex );
