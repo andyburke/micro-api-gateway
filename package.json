@@ -1,6 +1,6 @@
 {
   "name": "micro-api-gateway",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A small, flexible API gateway.",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,6 @@
     "extend": "^3.0.2",
     "get-request-ip": "^1.0.1",
     "httpstatuses": "^3.0.0",
-    "js-crypto-key-utils": "^0.5.4",
     "json-stable-stringify": "^1.0.1"
   }
 }
