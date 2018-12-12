@@ -1,7 +1,7 @@
 {
   "name": "micro-api-gateway",
   "version": "1.0.0",
-  "description": "A flexible API gateway.",
+  "description": "A small, flexible API gateway.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
