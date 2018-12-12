@@ -155,26 +155,25 @@ module.exports = {
                     }
 
                     try {
-                        proxied_request.on( 'error', error => {
-
-                            if ( !!error && error.code === 'ECONNREFUSED' ) {
-                                response.statusCode = httpstatuses.bad_gateway;
-                                response.setHeader( 'Content-Type', 'application/json' );
-                                response.end( JSON.stringify( {
-                                    error: 'connection refused',
-                                    message: 'The target connection was refused.'
-                                } ) );
-                            }
-                            else {
-                                response.statusCode = httpstatuses.internal_server_error;
-                                response.end();
-                            }
-                        } );
-
-                        proxied_request.on( 'response', proxied_response => {
-                            response.statusCode = proxied_response.statusCode;
-                            proxied_response.pipe( response );
-                        } );
+                        proxied_request
+                            .on( 'error', error => {
+                                if ( !!error && error.code === 'ECONNREFUSED' ) {
+                                    response.statusCode = httpstatuses.bad_gateway;
+                                    response.setHeader( 'Content-Type', 'application/json' );
+                                    response.end( JSON.stringify( {
+                                        error: 'connection refused',
+                                        message: 'The target connection was refused.'
+                                    } ) );
+                                }
+                                else {
+                                    response.statusCode = httpstatuses.internal_server_error;
+                                    response.end();
+                                }
+                            } )
+                            .on( 'response', proxied_response => {
+                                response.writeHead( proxied_response.statusCode, proxied_response.headers );
+                            } )
+                            .pipe( response );
 
                         request.pipe( proxied_request );
                     }
