@@ -29,7 +29,7 @@ async function _process_plugins( plugins, options, request, response ) {
                 try {
                     response.end( JSON.stringify( result ) );
                 }
-                catch( ex ) {
+                catch ( ex ) {
                     response.end( JSON.stringify( {
                         error: 'unknown error'
                     } ) );
@@ -163,15 +163,34 @@ const Gateway = {
             }
 
             const proxied_request = http.request( {
-                hostname: route._target.hostname,
-                port: route._target.port,
-                method: request.method,
-                path: target_url,
-                headers: extend( true, {}, request.headers, {
-                    'x-forwarded-for': get_request_ip( request ),
-                    'x-micro-api-gateway': pkg.version
+                    hostname: route._target.hostname,
+                    port: route._target.port,
+                    method: request.method,
+                    path: target_url,
+                    headers: extend( true, {}, request.headers, {
+                        'x-forwarded-for': get_request_ip( request ),
+                        'x-micro-api-gateway': pkg.version
+                    } )
                 } )
-            } );
+                .on( 'error', error => {
+                    console.log( 'proxied request error' );
+                    if ( !!error && error.code === 'ECONNREFUSED' ) {
+                        response.statusCode = httpstatuses.bad_gateway;
+                        response.setHeader( 'Content-Type', 'application/json' );
+                        response.end( JSON.stringify( {
+                            error: 'connection refused',
+                            message: 'The target connection was refused.'
+                        } ) );
+                    }
+                    else {
+                        response.statusCode = httpstatuses.internal_server_error;
+                        response.end();
+                    }
+                } )
+                .on( 'response', proxied_response => {
+                    response.writeHead( proxied_response.statusCode, proxied_response.headers );
+                    proxied_response.pipe( response );
+                } );
 
             const route_options = {
                 proxied_request,
@@ -183,39 +202,11 @@ const Gateway = {
             const stopped = await _process_plugins( plugins, route_options, request, response );
 
             if ( stopped ) {
+                proxied_request.abort();
                 return;
             }
 
-            try {
-                proxied_request
-                    .on( 'error', error => {
-                        console.log( 'proxied request error' );
-                        if ( !!error && error.code === 'ECONNREFUSED' ) {
-                            response.statusCode = httpstatuses.bad_gateway;
-                            response.setHeader( 'Content-Type', 'application/json' );
-                            response.end( JSON.stringify( {
-                                error: 'connection refused',
-                                message: 'The target connection was refused.'
-                            } ) );
-                        }
-                        else {
-                            response.statusCode = httpstatuses.internal_server_error;
-                            response.end();
-                        }
-                    } )
-                    .on( 'response', proxied_response => {
-                        response.writeHead( proxied_response.statusCode, proxied_response.headers );
-                        proxied_response.pipe( response );
-                    } );
-
-                request.pipe( proxied_request );
-            }
-            catch( ex ) {
-                console.dir( ex );
-                response.statusCode = httpstatuses.internal_server_error;
-                response.end();
-            }
-
+            request.pipe( proxied_request );
         } )
         .on( 'error', error => {
             console.log( 'server error' );
