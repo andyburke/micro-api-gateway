@@ -174,6 +174,7 @@ const Gateway = {
                 } )
                 .on( 'error', error => {
                     console.log( 'proxied request error' );
+                    console.dir( error );
                     if ( !!error && error.code === 'ECONNREFUSED' ) {
                         response.statusCode = httpstatuses.bad_gateway;
                         response.setHeader( 'Content-Type', 'application/json' );
