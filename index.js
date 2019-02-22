@@ -114,7 +114,7 @@ const Gateway = {
             let target_url = null;
 
             const endpoint = this.endpoints.find( _endpoint => {
-                const is_correct_method = _endpoint.methods === '*' ? true : _endpoint.methods.includes( request.method );
+                const is_correct_method = _endpoint.methods.includes( '*' ) || _endpoint.methods.includes( request.method );
                 target_url = request.url;
                 return is_correct_method && !!( request.params = _endpoint._matcher.match( target_url ) );
             } );
@@ -136,7 +136,7 @@ const Gateway = {
             }
 
             const route = this.routes.find( route => {
-                const is_correct_method = route.methods === '*' ? true : route.methods.includes( request.method );
+                const is_correct_method = route.methods.includes( '*' ) || route.methods.includes( request.method );
                 const is_correct_mount = route.mount ? request.url.indexOf( route.mount ) === 0 : true;
                 target_url = is_correct_mount ? ( route.mount ? request.url.substr( route.mount.length ) : request.url ) : null;
                 return is_correct_method && is_correct_mount && !!( request.params = route._matcher.match( target_url ) );
