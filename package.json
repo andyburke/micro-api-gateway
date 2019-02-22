@@ -1,6 +1,6 @@
 {
   "name": "micro-api-gateway",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "A small, flexible API gateway.",
   "main": "index.js",
   "engines" : {

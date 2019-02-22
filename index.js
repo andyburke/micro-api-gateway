@@ -113,6 +113,10 @@ const Gateway = {
 
             let target_url = null;
 
+            request.on( 'error', error => {
+                console.dir( error );
+            } );
+
             const endpoint = this.endpoints.find( _endpoint => {
                 const is_correct_method = _endpoint.methods.includes( '*' ) || _endpoint.methods.includes( request.method );
                 target_url = request.url;
