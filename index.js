@@ -116,9 +116,14 @@ const Gateway = {
             request.on( 'error', error => {
                 console.log( 'request error' );
                 console.dir( error );
-                if ( request.socket.destroyed && error.code === 'ECONNRESET' ) {
+                if ( request.socket && request.socket.destroyed && error.code === 'ECONNRESET' ) {
                     request.abort();
                 }
+            } );
+
+            response.on( 'error', error => {
+                console.log( 'response error' );
+                console.dir( error );
             } );
 
             const endpoint = this.endpoints.find( _endpoint => {
