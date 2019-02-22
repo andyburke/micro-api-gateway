@@ -3,6 +3,7 @@
 const extend = require( 'extend' );
 const get_request_ip = require( 'get-request-ip' );
 const http = require( 'http' );
+const https = require( 'https' );
 const httpstatuses = require( 'httpstatuses' );
 const pkg = require( './package.json' );
 const url = require( 'url' );
@@ -89,12 +90,8 @@ const Gateway = {
     },
 
     add_route: function( _route ) {
-        const parsed_target = url.parse( _route.target );
         const route = extend( true, {}, _route, {
-            _target: {
-                hostname: parsed_target.hostname,
-                port: parsed_target.port
-            },
+            _target: url.parse( _route.target ),
             _matcher: _route.matcher || this.options.matcher( _route.path )
         } );
 
@@ -162,20 +159,34 @@ const Gateway = {
                 return;
             }
 
-            const proxied_request = http.request( {
+            const proxied_request = ( route._target.protocol === 'https:' ? https : http ).request( {
                     hostname: route._target.hostname,
                     port: route._target.port,
                     method: request.method,
                     path: target_url,
                     headers: extend( true, {}, request.headers, {
+                        'connection': 'keep-alive',
                         'x-forwarded-for': get_request_ip( request ),
                         'x-micro-api-gateway': pkg.version
                     } )
                 } )
                 .on( 'error', error => {
-                    console.log( 'proxied request error' );
-                    console.dir( error );
-                    if ( !!error && error.code === 'ECONNREFUSED' ) {
+                    // nothing to be done if the response is already done
+                    if ( response.finished ) {
+                        return;
+                    }
+
+                    if ( !!error && error.code === 'ECONNRESET' ) {
+                        request.abort();
+                        response.statusCode = httpstatuses.bad_gateway;
+                        response.setHeader( 'Content-Type', 'application/json' );
+                        response.end( JSON.stringify( {
+                            error: 'connection reset',
+                            message: 'The target connection was reset.'
+                        } ) );
+                    }
+                    else if ( !!error && error.code === 'ECONNREFUSED' ) {
+                        request.abort();
                         response.statusCode = httpstatuses.bad_gateway;
                         response.setHeader( 'Content-Type', 'application/json' );
                         response.end( JSON.stringify( {
@@ -189,9 +200,15 @@ const Gateway = {
                     }
                 } )
                 .on( 'response', proxied_response => {
-                    response.writeHead( proxied_response.statusCode, proxied_response.headers );
-                    proxied_response.pipe( response );
+                    if ( !response.finished ) {
+                        response.writeHead( proxied_response.statusCode, proxied_response.headers );
+                        proxied_response.pipe( response );
+                    }
                 } );
+
+            request.on( 'abort', () => {
+                proxied_request.abort();
+            } );
 
             const route_options = {
                 proxied_request,
