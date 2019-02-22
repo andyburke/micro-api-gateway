@@ -154,10 +154,10 @@ const Gateway = {
                 port: route._target.port,
                 method: request.method,
                 path: target_url,
-                headers: {
+                headers: extend( true, {}, request.headers, {
                     'x-forwarded-for': get_request_ip( request ),
                     'x-micro-api-gateway': pkg.version
-                }
+                } )
             } );
 
             const route_options = {
