@@ -114,7 +114,11 @@ const Gateway = {
             let target_url = null;
 
             request.on( 'error', error => {
+                console.log( 'request error' );
                 console.dir( error );
+                if ( request.socket.destroyed && error.code === 'ECONNRESET' ) {
+                    request.abort();
+                }
             } );
 
             const endpoint = this.endpoints.find( _endpoint => {
@@ -180,6 +184,7 @@ const Gateway = {
             try {
                 proxied_request
                     .on( 'error', error => {
+                        console.log( 'proxied request error' );
                         if ( !!error && error.code === 'ECONNREFUSED' ) {
                             response.statusCode = httpstatuses.bad_gateway;
                             response.setHeader( 'Content-Type', 'application/json' );
@@ -208,6 +213,7 @@ const Gateway = {
 
         } )
         .on( 'error', error => {
+            console.log( 'server error' );
             console.dir( error );
         } )
         .listen( options.port );
