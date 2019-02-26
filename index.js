@@ -177,7 +177,6 @@ const Gateway = {
                     }
 
                     if ( !!error && error.code === 'ECONNRESET' ) {
-                        request.abort();
                         response.statusCode = httpstatuses.bad_gateway;
                         response.setHeader( 'Content-Type', 'application/json' );
                         response.end( JSON.stringify( {
@@ -186,7 +185,6 @@ const Gateway = {
                         } ) );
                     }
                     else if ( !!error && error.code === 'ECONNREFUSED' ) {
-                        request.abort();
                         response.statusCode = httpstatuses.bad_gateway;
                         response.setHeader( 'Content-Type', 'application/json' );
                         response.end( JSON.stringify( {
