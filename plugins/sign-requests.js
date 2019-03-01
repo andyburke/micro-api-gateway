@@ -5,15 +5,19 @@ const extend = require( 'extend' );
 const json_stable_stringify = require( 'json-stable-stringify' );
 
 module.exports = function( _options ) {
-    const options = extend( true, {}, _options );
+    const options = extend( true, {
+        headers: []
+    }, _options );
 
     return async function( input ) {
 
         input.proxied_request.setHeader( 'x-micro-api-gateway-signature-time', `${ +new Date() }` );
 
-        const headers_to_sign = extend( true, {}, input.proxied_request.getHeaders() );
-        delete headers_to_sign[ 'connection' ];
-        delete headers_to_sign[ 'transfer-encoding' ];
+        const request_headers = extend( true, {}, input.proxied_request.getHeaders() );
+        const headers_to_sign = options.headers.reduce( ( _headers_to_sign, header ) => {
+            _headers_to_sign[ header ] = request_headers[ header ];
+            return _headers_to_sign;
+        }, {} );
 
         const request_as_string = [ input.proxied_request.method, input.proxied_request.path, json_stable_stringify( headers_to_sign ) ].join( ':::' );
         const request_hash = crypto.createHash( 'SHA256' ).update( request_as_string ).digest( 'base64' );
