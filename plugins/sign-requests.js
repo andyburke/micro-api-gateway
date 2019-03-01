@@ -6,7 +6,7 @@ const json_stable_stringify = require( 'json-stable-stringify' );
 
 module.exports = function( _options ) {
     const options = extend( true, {
-        headers: []
+        headers_to_sign: []
     }, _options );
 
     return async function( input ) {
@@ -14,7 +14,7 @@ module.exports = function( _options ) {
         input.proxied_request.setHeader( 'x-micro-api-gateway-signature-time', `${ +new Date() }` );
 
         const request_headers = extend( true, {}, input.proxied_request.getHeaders() );
-        const headers_to_sign = options.headers.reduce( ( _headers_to_sign, header ) => {
+        const headers_to_sign = options.headers_to_sign.reduce( ( _headers_to_sign, header ) => {
             _headers_to_sign[ header ] = request_headers[ header ];
             return _headers_to_sign;
         }, {} );
