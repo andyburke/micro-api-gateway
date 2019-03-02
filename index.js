@@ -216,7 +216,11 @@ const Gateway = {
                 response
             };
 
-            const plugins = this.options.plugins.routes.concat( route.plugins || [] );
+            const route_plugins = this.options.plugins.routes || {
+                pre: [],
+                post: []
+            };
+            const plugins = [ ...route_plugins.pre, ...( route.plugins || [] ), ...route_plugins.post ];
             const stopped = await _process_plugins( plugins, route_options, request, response );
 
             if ( stopped ) {
