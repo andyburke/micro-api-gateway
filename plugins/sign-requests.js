@@ -15,7 +15,9 @@ module.exports = function( _options ) {
 
         const request_headers = extend( true, {}, input.proxied_request.getHeaders() );
         const headers_to_sign = options.headers_to_sign.reduce( ( _headers_to_sign, header ) => {
-            _headers_to_sign[ header ] = request_headers[ header ];
+            if ( typeof request_headers[ header ] !== 'undefined' ) {
+                _headers_to_sign[ header ] = request_headers[ header ];
+            }
             return _headers_to_sign;
         }, {} );
 
