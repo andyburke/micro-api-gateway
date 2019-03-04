@@ -25,9 +25,11 @@ module.exports = function( _options ) {
         const request_hash = crypto.createHash( 'SHA256' ).update( request_as_string ).digest( 'base64' );
         const request_hash_signature = crypto.createSign( 'RSA-SHA256' ).update( request_hash ).sign( options.key, 'base64' );
 
-        console.log( `REQ: ${ request_as_string }` );
-        console.log( `HASH: ${ request_hash }` );
-        console.log( `HASH_SIG: ${ request_hash_signature }` );
+        if ( process.env.API_GATEWAY_DEBUG ) {
+            console.log( `REQ: ${ request_as_string }` );
+            console.log( `HASH: ${ request_hash }` );
+            console.log( `HASH_SIG: ${ request_hash_signature }` );
+        }
 
         input.proxied_request.setHeader( 'x-micro-api-gateway-request-hash',  request_hash );
         input.proxied_request.setHeader( 'x-micro-api-gateway-signature', request_hash_signature );
