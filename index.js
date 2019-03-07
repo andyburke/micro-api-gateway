@@ -130,10 +130,10 @@ const Gateway = {
             } );
 
             if ( endpoint ) {
-                const endpoint_plugins = this.options.plugins.endpoints || {
+                const endpoint_plugins = extend( true, {
                     pre: [],
                     post: []
-                };
+                }, this.options.plugins.endpoints );
                 const plugins = [ ...endpoint_plugins.pre, ...( endpoint.plugins || [] ), ...endpoint_plugins.post ];
     
                 const stopped = await _process_plugins( plugins, {
@@ -221,10 +221,10 @@ const Gateway = {
                 response
             };
 
-            const route_plugins = this.options.plugins.routes || {
+            const route_plugins = extend( true, {
                 pre: [],
                 post: []
-            };
+            }, this.options.plugins.routes );
             const plugins = [ ...route_plugins.pre, ...( route.plugins || [] ), ...route_plugins.post ];
             const stopped = await _process_plugins( plugins, route_options, request, response );
 
