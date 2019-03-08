@@ -245,6 +245,7 @@ const Gateway = {
 
             const route_options = {
                 target: route._target,
+                target_url,
                 proxied_request,
                 request,
                 response
