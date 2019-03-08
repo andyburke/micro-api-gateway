@@ -194,11 +194,9 @@ const Gateway = {
 
             // TODO: allow for a target_path on a route, rewriting in the matched params, etc.
             
-            const proxied_request = ( route._target.protocol === 'https:' ? https : http ).request( {
-                    hostname: route._target.hostname,
-                    port: route._target.port,
+            const proxied_url = `${ route.target }${ target_url }`;
+            const proxied_request = ( route._target.protocol === 'https:' ? https : http ).request( proxied_url, {
                     method: request.method,
-                    path: target_url,
                     headers: extend( true, {}, request.headers, {
                         'connection': 'keep-alive',
                         'x-forwarded-for': get_request_ip( request ),
@@ -244,7 +242,7 @@ const Gateway = {
             } );
 
             const route_options = {
-                target: route._target,
+                target: route.target,
                 target_url,
                 proxied_request,
                 request,
