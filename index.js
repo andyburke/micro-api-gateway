@@ -190,11 +190,11 @@ const Gateway = {
                 return;
             }
 
-            log( `route match: ${ JSON.stringify( route.methods ) } ${ route.mount } ${ route.path }` );
-
             // TODO: allow for a target_path on a route, rewriting in the matched params, etc.
-            
             const proxied_url = `${ route.target }${ target_url }`;
+
+            log( `route match: ${ JSON.stringify( route.methods ) } ${ route.mount } ${ route.path } => (${ route._target.protocol }) ${ proxied_url }` );
+
             const proxied_request = ( route._target.protocol === 'https:' ? https : http ).request( proxied_url, {
                     method: request.method,
                     headers: extend( true, {}, request.headers, {
