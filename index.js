@@ -8,6 +8,20 @@ const httpstatuses = require( 'httpstatuses' );
 const pkg = require( './package.json' );
 const url = require( 'url' );
 
+function log( request ) {
+    if ( !process.env.GATEWAY_LOGGING ) {
+        return;
+    }
+
+    const fields = [];
+    fields.push( ( ( request.start && new Date( request.start ) ) || new Date() ).toISOString() ); // time
+    fields.push( `HTTP/${ request.httpVersion }` ); // protocol version
+    fields.push( get_request_ip( request ) ); // ip
+    fields.push( `"${ request.headers[ 'user-agent' ] || '-' }"` );
+    fields.push( `"${ request.headers.referer || '-' }"` );
+    console.log( fields.join(' ') );
+}
+
 async function _process_plugins( plugins, options, request, response ) {
     let stopped = false;
 
@@ -107,6 +121,7 @@ const Gateway = {
         }, _options );
 
         http.createServer( async ( request, response ) => {
+            log( request );
 
             let target_url = null;
 
