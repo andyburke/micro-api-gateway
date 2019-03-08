@@ -14,9 +14,11 @@ function log( request ) {
     }
 
     const fields = [];
-    fields.push( ( ( request.start && new Date( request.start ) ) || new Date() ).toISOString() ); // time
-    fields.push( `HTTP/${ request.httpVersion }` ); // protocol version
-    fields.push( get_request_ip( request ) ); // ip
+    fields.push( ( ( request.start && new Date( request.start ) ) || new Date() ).toISOString() );
+    fields.push( `HTTP/${ request.httpVersion }` );
+    fields.push( get_request_ip( request ) );
+    fields.push( request.method );
+    fields.push( request.url );
     fields.push( `"${ request.headers[ 'user-agent' ] || '-' }"` );
     fields.push( `"${ request.headers.referer || '-' }"` );
     console.log( fields.join(' ') );
