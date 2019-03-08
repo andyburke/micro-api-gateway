@@ -8,7 +8,15 @@ const httpstatuses = require( 'httpstatuses' );
 const pkg = require( './package.json' );
 const url = require( 'url' );
 
-function log( request ) {
+function log( str ) {
+    if ( !process.env.GATEWAY_LOGGING ) {
+        return;
+    }
+
+    console.log( str );
+}
+
+function log_request( request ) {
     if ( !process.env.GATEWAY_LOGGING ) {
         return;
     }
@@ -123,7 +131,7 @@ const Gateway = {
         }, _options );
 
         http.createServer( async ( request, response ) => {
-            log( request );
+            log_request( request );
 
             let target_url = null;
 
@@ -147,6 +155,8 @@ const Gateway = {
             } );
 
             if ( endpoint ) {
+                log( `endpoint match: ${ JSON.stringify( endpoint.methods ) } ${ endpoint.path }` );
+
                 const endpoint_plugins = extend( true, {
                     pre: [],
                     post: []
@@ -179,6 +189,8 @@ const Gateway = {
                 response.end( '{ "error": "not found" }' );
                 return;
             }
+
+            log( `route match: ${ JSON.stringify( route.methods ) } ${ route.mount } ${ route.path }` );
 
             // TODO: allow for a target_path on a route, rewriting in the matched params, etc.
             
