@@ -195,21 +195,18 @@ const Gateway = {
 
             log( `route match: ${ JSON.stringify( route.methods ) } ${ route.mount } ${ route.path } => (${ route._target.protocol }) ${ proxied_url }` );
 
-            // const headers = extend( true, {}, request.headers, {
-            //     'connection': 'keep-alive',
-            //     'x-forwarded-for': get_request_ip( request ),
-            //     'x-micro-api-gateway': pkg.version
-            // } );
-            // delete headers.host; // clear host header, as it should be set in the proxied request
+            const headers = extend( true, {}, request.headers, {
+                'connection': 'keep-alive',
+                'x-forwarded-for': get_request_ip( request ),
+                'x-micro-api-gateway': pkg.version
+            } );
+            delete headers.host; // clear host header, as it should be set in the proxied request
 
-            // log( JSON.stringify( headers, null, 4 ) );
+            log( JSON.stringify( headers, null, 4 ) );
 
             const proxied_request = ( route._target.protocol === 'https:' ? https : http ).request( proxied_url, {
                 method: request.method,
-                headers: {
-                    'x-forwarded-for': get_request_ip( request ),
-                    'x-micro-api-gateway': pkg.version
-                }
+                headers
             } );
 
             proxied_request.on( 'error', error => {
