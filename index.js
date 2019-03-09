@@ -207,6 +207,11 @@ const Gateway = {
             const proxied_request = ( route._target.protocol === 'https:' ? https : http ).request( proxied_url, {
                 method: request.method,
                 headers
+            }, proxied_response => {
+                if ( !response.finished ) {
+                    response.writeHead( proxied_response.statusCode, proxied_response.headers );
+                    proxied_response.pipe( response );
+                }
             } );
 
             proxied_request.on( 'error', error => {
@@ -241,13 +246,6 @@ const Gateway = {
                         stack: error.stack || null
                     } ) );
                     response.end();
-                }
-            } );
-
-            proxied_request.on( 'response', proxied_response => {
-                if ( !response.finished ) {
-                    response.writeHead( proxied_response.statusCode, proxied_response.headers );
-                    proxied_response.pipe( response );
                 }
             } );
 
