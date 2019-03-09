@@ -29,7 +29,7 @@ function log_request( request ) {
     fields.push( request.url );
     fields.push( `"${ request.headers[ 'user-agent' ] || '-' }"` );
     fields.push( `"${ request.headers.referer || '-' }"` );
-    console.log( fields.join(' ') );
+    console.log( fields.join( ' ' ) );
 }
 
 async function _process_plugins( plugins, options, request, response ) {
@@ -130,7 +130,7 @@ const Gateway = {
             port: 8000
         }, _options );
 
-        http.createServer( async ( request, response ) => {
+        const proxy_server = http.createServer( async ( request, response ) => {
             log_request( request );
 
             let target_url = null;
@@ -205,49 +205,51 @@ const Gateway = {
             log( JSON.stringify( headers, null, 4 ) );
 
             const proxied_request = ( route._target.protocol === 'https:' ? https : http ).request( proxied_url, {
-                    method: request.method,
-                    headers
-                } )
-                .on( 'error', error => {
-                    // nothing to be done if the response is already done
-                    if ( response.finished ) {
-                        return;
-                    }
+                method: request.method,
+                headers
+            } );
 
-                    if ( !!error && error.code === 'ECONNRESET' ) {
-                        response.statusCode = httpstatuses.bad_gateway;
-                        response.setHeader( 'Content-Type', 'application/json' );
-                        response.end( JSON.stringify( {
-                            error: 'connection reset',
-                            message: 'The target connection was reset.'
-                        } ) );
-                    }
-                    else if ( !!error && error.code === 'ECONNREFUSED' ) {
-                        response.statusCode = httpstatuses.bad_gateway;
-                        response.setHeader( 'Content-Type', 'application/json' );
-                        response.end( JSON.stringify( {
-                            error: 'connection refused',
-                            message: 'The target connection was refused.'
-                        } ) );
-                    }
-                    else {
-                        response.statusCode = httpstatuses.internal_server_error;
-                        response.setHeader( 'Content-Type', 'application/json' );
-                        response.end( JSON.stringify( {
-                            error: 'unknown error',
-                            code: error.code || null,
-                            message: error.message || 'Unknown error.',
-                            stack: error.stack || null
-                        } ) );
-                        response.end();
-                    }
-                } )
-                .on( 'response', proxied_response => {
-                    if ( !response.finished ) {
-                        response.writeHead( proxied_response.statusCode, proxied_response.headers );
-                        proxied_response.pipe( response );
-                    }
-                } );
+            proxied_request.on( 'error', error => {
+                // nothing to be done if the response is already done
+                if ( response.finished ) {
+                    return;
+                }
+
+                if ( !!error && error.code === 'ECONNRESET' ) {
+                    response.statusCode = httpstatuses.bad_gateway;
+                    response.setHeader( 'Content-Type', 'application/json' );
+                    response.end( JSON.stringify( {
+                        error: 'connection reset',
+                        message: 'The target connection was reset.'
+                    } ) );
+                }
+                else if ( !!error && error.code === 'ECONNREFUSED' ) {
+                    response.statusCode = httpstatuses.bad_gateway;
+                    response.setHeader( 'Content-Type', 'application/json' );
+                    response.end( JSON.stringify( {
+                        error: 'connection refused',
+                        message: 'The target connection was refused.'
+                    } ) );
+                }
+                else {
+                    response.statusCode = httpstatuses.internal_server_error;
+                    response.setHeader( 'Content-Type', 'application/json' );
+                    response.end( JSON.stringify( {
+                        error: 'unknown error',
+                        code: error.code || null,
+                        message: error.message || 'Unknown error.',
+                        stack: error.stack || null
+                    } ) );
+                    response.end();
+                }
+            } );
+
+            proxied_request.on( 'response', proxied_response => {
+                if ( !response.finished ) {
+                    response.writeHead( proxied_response.statusCode, proxied_response.headers );
+                    proxied_response.pipe( response );
+                }
+            } );
 
             request.on( 'abort', () => {
                 proxied_request.abort();
@@ -274,12 +276,14 @@ const Gateway = {
             }
 
             request.pipe( proxied_request );
-        } )
-        .on( 'error', error => {
+        } );
+
+        proxy_server.on( 'error', error => {
             console.log( 'server error' );
             console.dir( error );
-        } )
-        .listen( options.port );
+        } );
+
+        proxy_server.listen( options.port );
     }
 };
 

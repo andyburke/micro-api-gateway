@@ -33,5 +33,5 @@ module.exports = function( _options ) {
 
         input.proxied_request.setHeader( 'x-micro-api-gateway-request-hash',  request_hash );
         input.proxied_request.setHeader( 'x-micro-api-gateway-signature', request_hash_signature );
-    }
+    };
 };
