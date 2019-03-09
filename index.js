@@ -195,13 +195,18 @@ const Gateway = {
 
             log( `route match: ${ JSON.stringify( route.methods ) } ${ route.mount } ${ route.path } => (${ route._target.protocol }) ${ proxied_url }` );
 
+            const headers = extend( true, {}, request.headers, {
+                'connection': 'keep-alive',
+                'x-forwarded-for': get_request_ip( request ),
+                'x-micro-api-gateway': pkg.version
+            } );
+            delete headers.host; // clear host header, as it should be set in the proxied request
+
+            log( JSON.stringify( headers, null, 4 ) );
+
             const proxied_request = ( route._target.protocol === 'https:' ? https : http ).request( proxied_url, {
                     method: request.method,
-                    headers: extend( true, {}, request.headers, {
-                        'connection': 'keep-alive',
-                        'x-forwarded-for': get_request_ip( request ),
-                        'x-micro-api-gateway': pkg.version
-                    } )
+                    headers
                 } )
                 .on( 'error', error => {
                     // nothing to be done if the response is already done
@@ -227,6 +232,13 @@ const Gateway = {
                     }
                     else {
                         response.statusCode = httpstatuses.internal_server_error;
+                        response.setHeader( 'Content-Type', 'application/json' );
+                        response.end( JSON.stringify( {
+                            error: 'unknown error',
+                            code: error.code || null,
+                            message: error.message || 'Unknown error.',
+                            stack: error.stack || null
+                        } ) );
                         response.end();
                     }
                 } )
