@@ -25,7 +25,7 @@ module.exports = function( _options ) {
         }
 
         const decoded = jwt.decode( token_string );
-        const public_key = options.get_public_key( decoded.iss );
+        const public_key = await options.get_public_key( decoded.iss );
 
         if ( !public_key ) {
             return;
